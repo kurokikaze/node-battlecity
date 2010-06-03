@@ -1,12 +1,8 @@
-var battlecity;
+var battlecity = {};
 
 (function(){
 
-    var field = function() {
-        this.x = '';
-    }
-
-    var map = function(map_array) {
+    battlecity.map = function(map_array) {
         // ' ' : Ничего
         // 'f' : Лес
         // 'w' : Вода
@@ -36,10 +32,11 @@ var battlecity;
 
         var bullets = [];
 
+        var turn_number = 1;
+
         // Загружаем карту
         for (var row in map_array) {
             for (var column in map_array[row]) {
-                console.log(map_array[row][column]);
                 // Каждый квадрат карты это 3 квадрата поля
                 for (var i = 0; i<3; i++) {
                     for (var j = 0; j<3; j++) {
@@ -56,6 +53,7 @@ var battlecity;
         players.push(new tank);
 
         this.checkAvailability = function(x, y) {
+            console.log('Testing ' + x + ', ' + y);
             if (map[x][y] === ' ' || map[x][y] === 'f') {
                 return true;
             } else {
@@ -72,13 +70,48 @@ var battlecity;
             // Создать противников, если нужно
 
             // Опросить и подвинуть танки игроков, проверить столкновения
+            console.log('move');
             for (player_id in players) {
-                player[player_id].move();
+                players[player_id].move(this);
             }
 
+            console.log('bullets');
             // Подвинуть пули (4 раза),..
             // ...проверить не попали ли в кого нибудь
-            for (var bullet in bullets) {
+            for (var bullet_id in bullets) {
+
+                bullet = bullets[bullet_id];
+
+                var possible = false;
+
+                switch(bullet.dir) {
+                    case 'u':
+                        possible = map.checkAvailability(bullet.x, bullet.y - 1);
+                    case 'd':
+                        possible = map.checkAvailability(bullet.x, bullet.y + 1);
+                    case 'l':
+                        possible = map.checkAvailability(bullet.x - 1, bullet.y);
+                    case 'r':
+                        possible = map.checkAvailability(bullet.x + 1, bullet.y);
+                }
+
+                if (possible) {
+                    switch(bullet.dir) {
+                        case 'u':
+                            bullets[bullet_id].y = bullet.y - 1;
+                        case 'd':
+                            bullets[bullet_id].y = bullet.y + 1;
+                        case 'l':
+                            bullets[bullet_id].x = bullet.x - 1;
+                        case 'r':
+                            bullets[bullet_id].x = bullet.x + 1;
+                    }
+
+                } else {
+                    // Стена! Пока просто уберём пулю
+                    unset(bullets[bullet_id]);
+                }
+
                 for (var player in players) {
                     var pos = players[player].position();
                     // Если попали...
@@ -87,21 +120,35 @@ var battlecity;
                         if (!players[player].damage()) {
                             // Последнюю статистику забираем
                             var stats = players[player].stats();
+                            stats.survived = turn_number;
                             unset(players[player]);
                         }
+
                     }
                 }
             }
 
+            console.log('end');
             // Конец хода
+            turn_number++;
+        }
+
+        this.status = function() {
+            return {
+                'turn':turn_number,
+                'bullets':bullets.length,
+                'player1':players[0].position(),
+                'player2':players[1].position()
+            };
         }
     }
 
-    var tank = function() {
-        var x = 0;
-        var y = 0;
+    var tank = function(setx, sety) {
+        var x = setx | 0;
+        var y = sety | 0;
 
-        var direction = 'n'
+        var direction = 'd';
+        var state = true;
 
         // Statistics
         var odometer = 0;
@@ -115,6 +162,7 @@ var battlecity;
 
         this.move = function(map) {
             for (var i = 0; i < speed; i++) {
+                console.log('step');
                 this.step(map);
             }
         }
@@ -181,12 +229,16 @@ var battlecity;
         }
 
         this.damage = function() {
-            state = dead;
+            state = false;
             return false;
         }
 
+        this.alive = function() {
+            return state;
+        }
+
         this.stats = function() {
-            return {'mov':odometer, 'sht':bullets_shot};
+            return {'move':odometer, 'shot':bullets_shot};
         }
     }
 })();
