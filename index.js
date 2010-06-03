@@ -34,6 +34,8 @@ var battlecity;
 
         var map = [[],[],[],[],[],[],[],[],[],[],[]];
 
+        var bullets = [];
+
         // Загружаем карту
         for (var row in map_array) {
             for (var column in map_array[row]) {
@@ -61,6 +63,10 @@ var battlecity;
             }
         }
 
+        this.addBullet = function(x, y, direction) {
+            bullets.push({'x':x, 'y':y, 'dir':direction});
+        }
+
         // Содержание хода
         this.progress = function() {
             // Создать противников, если нужно
@@ -70,7 +76,24 @@ var battlecity;
                 player[player_id].move();
             }
 
-            // Подвинуть пули (4 раза), проверить не попали ли в кого нибудь
+            // Подвинуть пули (4 раза),..
+            // ...проверить не попали ли в кого нибудь
+            for (var bullet in bullets) {
+                for (var player in players) {
+                    var pos = players[player].position();
+                    // Если попали...
+                    if (Math.abs(bullet.x - pos.x) < 3 && Math.abs(bullet.y - pos.y) < 3 ) {
+
+                        if (!players[player].damage()) {
+                            // Последнюю статистику забираем
+                            var stats = players[player].stats();
+                            unset(players[player]);
+                        }
+                    }
+                }
+            }
+
+            // Конец хода
         }
     }
 
@@ -79,8 +102,10 @@ var battlecity;
         var y = 0;
 
         var direction = 'n'
-        // Odometer
+
+        // Statistics
         var odometer = 0;
+        var bullets_shot = 0;
 
         var speed = 1;
 
@@ -119,7 +144,7 @@ var battlecity;
                         x = x + 1;
                 }
 
-                odometer += 1;
+                odometer++;
             }
 
             return possible;
@@ -127,7 +152,21 @@ var battlecity;
 
         this.shoot = function(map) {
             if (gunheat == 0) {
-                map.addBullet(x,y,direction);
+                bullet_x = x;
+                bullet_y = y;
+                switch(direction) {
+                    case 'u':
+                        bullet_y -=  2;
+                    case 'd':
+                        bullet_y += 2;
+                    case 'l':
+                        bullet_x -= 2;
+                    case 'r':
+                        bullet_x += 2;
+                }
+                map.addBullet(bullet_x, bullet_y);
+
+                bullets_shot++;
             }
         }
 
@@ -135,6 +174,19 @@ var battlecity;
             if (gunheat > 0) {
                 gunheat -= 1;
             }
+        }
+
+        this.position = function() {
+            return [x, y];
+        }
+
+        this.damage = function() {
+            state = dead;
+            return false;
+        }
+
+        this.stats = function() {
+            return {'mov':odometer, 'sht':bullets_shot};
         }
     }
 })();
