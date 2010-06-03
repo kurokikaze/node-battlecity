@@ -47,12 +47,30 @@ var battlecity;
             }
         }
 
+        var players = [];
+
+        // Загружаем игроков
+        players.push(new tank);
+        players.push(new tank);
+
         this.checkAvailability = function(x, y) {
             if (map[x][y] === ' ' || map[x][y] === 'f') {
                 return true;
             } else {
                 return false;
             }
+        }
+
+        // Содержание хода
+        this.progress = function() {
+            // Создать противников, если нужно
+
+            // Опросить и подвинуть танки игроков, проверить столкновения
+            for (player_id in players) {
+                player[player_id].move();
+            }
+
+            // Подвинуть пули (4 раза), проверить не попали ли в кого нибудь
         }
     }
 
@@ -71,6 +89,12 @@ var battlecity;
         }
 
         this.move = function(map) {
+            for (var i = 0; i < speed; i++) {
+                this.step(map);
+            }
+        }
+
+        this.step = function(map) {
             var possible = false;
             switch(direction) {
                 case 'u':
@@ -82,6 +106,7 @@ var battlecity;
                 case 'r':
                     possible = map.checkAvailability(x + 1, y);
             }
+
             if (possible) {
                 switch(direction) {
                     case 'u':
@@ -95,7 +120,6 @@ var battlecity;
                 }
 
                 odometer += 1;
-
             }
 
             return possible;
