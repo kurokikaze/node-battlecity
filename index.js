@@ -11,24 +11,29 @@ var battlecity = {};
         // 'i' : Лёд
         // 'i' : Лёд
 
-        /*
-        [[' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
-         [' ','#',' ','#',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ','#',' ','#',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ','#','#','#',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ','#',' ','#',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ','#',' ','#',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
-         [' ','#',' ',' ',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ','#',' ',' ',' ',' ',' ',' ',' ',' ',' ','#',' '],
-         [' ','#',' ',' ','#','#','#','#','#',' ',' ','#',' '],
-         [' ','#',' ',' ','#','B','B','B','#',' ',' ','#',' '],
-         [' ','#',' ',' ','#','B','B','B','#',' ',' ','#',' '],
-         [' ',' ',' ',' ','#','B','B','B','#',' ',' ',' ',' ']]
 
-        */
+        var map_array =   [[' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#','#','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                     [' ','#',' ','#',' ','#','#','#',' ','#',' ','#',' '],
+                     [' ',' ',' ',' ',' ','#','B','#',' ',' ',' ',' ',' ']];
 
-        var map = [[],[],[],[],[],[],[],[],[],[],[]];
+
+
+        var map = [
+            [],[],[],[],[],[],[],[],[],[],[],[],[],
+            [],[],[],[],[],[],[],[],[],[],[],[],[],
+            [],[],[],[],[],[],[],[],[],[],[],[],[],
+            [],[],[],[],[],[],[],[],[],[],[],[],[]
+        ];
 
         var bullets = [];
 
@@ -37,10 +42,10 @@ var battlecity = {};
         // Загружаем карту
         for (var row in map_array) {
             for (var column in map_array[row]) {
-                // Каждый квадрат карты это 3 квадрата поля
-                for (var i = 0; i<3; i++) {
-                    for (var j = 0; j<3; j++) {
-                        map[(parseInt(row) * 3)  + i][(parseInt(column) * 3) + j] = map_array[row][column];
+                // Каждый квадрат карты это 16 квадратов поля
+                for (var i = 0; i<4; i++) {
+                    for (var j = 0; j<4; j++) {
+                        map[(parseInt(row) * 4)  + parseInt(i)][(parseInt(column) * 4) + parseInt(j)] = map_array[row][column];
                     }
                 }
             }
@@ -49,16 +54,25 @@ var battlecity = {};
         var players = [];
 
         // Загружаем игроков
-        players.push(new tank);
-        players.push(new tank);
+        players.push(new tank(16, 48));
+        players.push(new tank(32 ,48));
 
         this.checkAvailability = function(x, y) {
             console.log('Testing ' + x + ', ' + y);
-            if (map[x][y] === ' ' || map[x][y] === 'f') {
-                return true;
-            } else {
+            if (x < 0 || x > (4*13) || y < 0 || y > (4*13)) {
+                console.log('Out of bounds');
                 return false;
             }
+
+            if (map[x][y] === ' ' || map[x][y] === 'f') {
+                console.log('Passable');
+                return true;
+            } else {
+                console.log('Impassable : ' + map[x][y]);
+                return false;
+            }
+
+
         }
 
         this.addBullet = function(x, y, direction) {
@@ -87,24 +101,32 @@ var battlecity = {};
                 switch(bullet.dir) {
                     case 'u':
                         possible = map.checkAvailability(bullet.x, bullet.y - 1);
+                        break;
                     case 'd':
                         possible = map.checkAvailability(bullet.x, bullet.y + 1);
+                        break;
                     case 'l':
                         possible = map.checkAvailability(bullet.x - 1, bullet.y);
+                        break;
                     case 'r':
                         possible = map.checkAvailability(bullet.x + 1, bullet.y);
+                        break;
                 }
 
                 if (possible) {
                     switch(bullet.dir) {
                         case 'u':
                             bullets[bullet_id].y = bullet.y - 1;
+                        break;
                         case 'd':
                             bullets[bullet_id].y = bullet.y + 1;
+                        break;
                         case 'l':
                             bullets[bullet_id].x = bullet.x - 1;
+                        break;
                         case 'r':
                             bullets[bullet_id].x = bullet.x + 1;
+                        break;
                     }
 
                 } else {
@@ -116,7 +138,7 @@ var battlecity = {};
                     var pos = players[player].position();
                     // Если попали...
                     if (Math.abs(bullet.x - pos.x) < 3 && Math.abs(bullet.y - pos.y) < 3 ) {
-
+                        console.log('Player ' + player + ' damaged by bullet');
                         if (!players[player].damage()) {
                             // Последнюю статистику забираем
                             var stats = players[player].stats();
@@ -141,13 +163,19 @@ var battlecity = {};
                 'player2':players[1].position()
             };
         }
+
+        this.showmap = function() {
+            for (row in map) {
+                console.log(':' + map[row].join(''));
+            }
+        }
     }
 
     var tank = function(setx, sety) {
         var x = setx | 0;
         var y = sety | 0;
 
-        var direction = 'd';
+        var direction = 'u';
         var state = true;
 
         // Statistics
@@ -169,27 +197,38 @@ var battlecity = {};
 
         this.step = function(map) {
             var possible = false;
+            console.log('Going '+ direction);
             switch(direction) {
                 case 'u':
                     possible = map.checkAvailability(x, y - 1);
+                        break;
                 case 'd':
                     possible = map.checkAvailability(x, y + 1);
+                        break;
                 case 'l':
                     possible = map.checkAvailability(x - 1, y);
+                        break;
                 case 'r':
                     possible = map.checkAvailability(x + 1, y);
+                        break;
             }
 
             if (possible) {
+                console.log('Movement is possible');
+
                 switch(direction) {
                     case 'u':
                         y = y - 1;
+                        break;
                     case 'd':
                         y = y + 1;
+                        break;
                     case 'l':
                         x = x - 1;
+                        break;
                     case 'r':
                         x = x + 1;
+                        break;
                 }
 
                 odometer++;
@@ -205,12 +244,16 @@ var battlecity = {};
                 switch(direction) {
                     case 'u':
                         bullet_y -=  2;
+                        break;
                     case 'd':
                         bullet_y += 2;
+                        break;
                     case 'l':
                         bullet_x -= 2;
+                        break;
                     case 'r':
                         bullet_x += 2;
+                        break;
                 }
                 map.addBullet(bullet_x, bullet_y);
 
