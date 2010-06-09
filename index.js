@@ -1,4 +1,5 @@
 var battlecity = {};
+//var doit = require('./do');
 
 (function(){
 
@@ -14,13 +15,13 @@ var battlecity = {};
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#','#','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                         ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
+                         ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                         ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ']];
 
@@ -62,11 +63,11 @@ var battlecity = {};
                 return false;
             }
 
-            if (map[x][y] === ' ' || map[x][y] === 'f') {
+            if (map[y][x] === ' ' || map[y][x] === 'f') {
                 console.log('Passable');
                 return true;
             } else {
-                console.log('Impassable : ' + map[x][y]);
+                console.log('Impassable : ' + map[y][x]);
                 return false;
             }
 
@@ -85,6 +86,7 @@ var battlecity = {};
             console.log('move');
             for (player_id in players) {
                 players[player_id].move(this);
+                players[player_id].shoot(this);
             }
 
             console.log('bullets');
@@ -92,7 +94,7 @@ var battlecity = {};
             // ...проверить не попали ли в кого нибудь
             for (var bullet_id in bullets) {
 
-                bullet = bullets[bullet_id];
+                var bullet = bullets[bullet_id];
 
                 var possible = false;
 
@@ -128,8 +130,14 @@ var battlecity = {};
                     }
 
                 } else {
-                    // Стена! Пока просто уберём пулю
-                    unset(bullets[bullet_id]);
+                    // Разрушение сегмента (пока одного)
+                    if (map[bullets[bullet_id].y][bullets[bullet_id].x] == '#') {
+                        console.log('Bullet destroyed the wall in ' + bullets[bullet_id].x + ', ' + bullets[bullet_id].y);
+                        map[bullets[bullet_id].y][bullets[bullet_id].x] = ' ';
+                    }
+
+                    // убираем пулю
+                    delete bullets[bullet_id];
                 }
 
                 for (var player in players) {
@@ -181,6 +189,7 @@ var battlecity = {};
         var bullets_shot = 0;
 
         var speed = 1;
+        var gunheat = 0;
 
         this.turn = function(new_direction) {
             direction = new_direction;
