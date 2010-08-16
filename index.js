@@ -1,7 +1,15 @@
+var console = {};
+console.log = require('sys').puts;
+
+
 var battlecity = {};
 //var doit = require('./do');
 
 (function(){
+
+    battlecity.enemies = {
+     
+    }
 
     battlecity.map = function(map_array) {
         // ' ' : Ничего
@@ -17,7 +25,7 @@ var battlecity = {};
                          [' ','#','#','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
+                         [' ',' ',' ',' ',' ',' ',' ',' ','#',' ',' ',' ',' '],
                          ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
@@ -39,6 +47,9 @@ var battlecity = {};
         var tank = function(setx, sety) {
             var x = setx | 0;
             var y = sety | 0;
+
+            var danger_counter = 3;
+            var danger_cooldown = 10;
 
             var direction = 'u';
             var state = true;
@@ -125,9 +136,10 @@ var battlecity = {};
                             bullet_y +=  1;
                             break;
                     }
-                    self_map.addBullet(bullet_x, bullet_y);
+                    self_map.addBullet(bullet_x, bullet_y, direction);
 
                     bullets_shot++;
+                    gunheat = 10;
                 }
             }
 
@@ -172,7 +184,20 @@ var battlecity = {};
             }
         }
 
+        for (var i = 0; i<6; i++) {
+            for (var j = 0; j<8; j++) {
+                if (i < 2 || j < 2 || j >= 6) {
+                    map[(12 * 4) - 2 + parseInt(i)][(6 * 4) - 2 + parseInt(j)] = '#';
+                } else {
+                    map[(12 * 4) - 2 + parseInt(i)][(6 * 4) - 2 + parseInt(j)] = 'E';
+                }
+            }
+        }
+
+//        map[7][13] = 'E'; // Place eagle
+
         var players = [];
+        var enemies = [];
 
         var self = this;
 
@@ -210,6 +235,7 @@ var battlecity = {};
 
         var BulletHitSomething = function(bullet) {
 
+            console.log('Bullet-testing ' + bullet.x + ', ' + bullet.y);
 
             var hit = false;
 
@@ -246,12 +272,14 @@ var battlecity = {};
 
         this.addExplosion = function(x, y, direction) {
             for (var i = 0; i < 4; i++) {
-                for (var j = 0; j < 4; i++) {
-                    if (map[i][j] == '#') {
-                        map[i][j] == ' ';
+                for (var j = 0; j < 4; j++) {
+                    if (this.getMapSquare( x + j, y + i) == '#') {
+                        console.log('clearing ' + (x + j) + ', ' + (y + i));
+                        map[y + i][x + j] = ' ';
                     }
                 }
             }
+            console.log('BOOM');
             explosions.push({'x':x, 'y':y, 'frame': 3});
         }
 
@@ -269,66 +297,80 @@ var battlecity = {};
 
             console.log('bullets');
             // Подвинуть пули (4 раза),..
-            // ...проверить не попали ли в кого нибудь
-            for (var bullet_id in bullets) {
+            for (var n = 0; n < 4; n++) {
+                // ...проверить не попали ли в кого нибудь
+                for (var bullet_id in bullets) {
 
-                var bullet = bullets[bullet_id];
+                    var bullet = bullets[bullet_id];
 
-                var possible = false;
+                    var possible = false;
 
-                switch(bullet.dir) {
-                    case 'u':
-                        possible = this.checkAvailability(bullet.x, bullet.y - 1);
-                        break;
-                    case 'd':
-                        possible = this.checkAvailability(bullet.x, bullet.y + 1);
-                        break;
-                    case 'l':
-                        possible = this.checkAvailability(bullet.x - 1, bullet.y);
-                        break;
-                    case 'r':
-                        possible = this.checkAvailability(bullet.x + 1, bullet.y);
-                        break;
-                }
-
-                if (possible) {
                     switch(bullet.dir) {
                         case 'u':
-                            bullets[bullet_id].y = bullet.y - 1;
-                        break;
+                            possible = this.checkAvailability(bullet.x, bullet.y - 1);
+                            break;
                         case 'd':
-                            bullets[bullet_id].y = bullet.y + 1;
-                        break;
+                            possible = this.checkAvailability(bullet.x, bullet.y + 1);
+                            break;
                         case 'l':
-                            bullets[bullet_id].x = bullet.x - 1;
-                        break;
+                            possible = this.checkAvailability(bullet.x - 1, bullet.y);
+                            break;
                         case 'r':
-                            bullets[bullet_id].x = bullet.x + 1;
-                        break;
+                            possible = this.checkAvailability(bullet.x + 1, bullet.y);
+                            break;
+                        default:
+                            console.log('Strange direction: ' + bullet.dir);
                     }
 
-                }
-
-                if (BulletHitSomething(bullets[bullet_id])) {
-                    this.addExplosion(bullets[bullet_id].x - 1, bullets[bullet_id].y - 1);
-                    delete bullets[bullet_id];
-                    console.log('Boom!!!');
-                }
-
-                /*for (var player in players) {
-                    var pos = players[player].position();
-                    // Если попали...
-                    if (Math.abs(bullet.x - pos.x) < 3 && Math.abs(bullet.y - pos.y) < 3 ) {
-                        console.log('Player ' + player + ' damaged by bullet');
-                        if (!players[player].damage()) {
-                            // Последнюю статистику забираем
-                            var stats = players[player].stats();
-                            stats.survived = turn_number;
-                            unset(players[player]);
+                    if (possible) {
+                        switch(bullet.dir) {
+                            case 'u':
+                                bullet.y = bullet.y - 1;
+                            break;
+                            case 'd':
+                                bullet.y = bullet.y + 1;
+                            break;
+                            case 'l':
+                                bullet.x = bullet.x - 1;
+                            break;
+                            case 'r':
+                                bullet.x = bullet.x + 1;
+                            break;
                         }
 
+                    } else {
+
+    //                    if (BulletHitSomething(bullet)) {
+                            console.log('Boom!!!');
+                            this.addExplosion(bullet.x - 1, bullet.y - 1);
+                            delete bullets[bullet_id];
+
+    //                    }
                     }
-                }*/
+
+                    /*for (var player in players) {
+                        var pos = players[player].position();
+                        // Если попали...
+                        if (Math.abs(bullet.x - pos.x) < 3 && Math.abs(bullet.y - pos.y) < 3 ) {
+                            console.log('Player ' + player + ' damaged by bullet');
+                            if (!players[player].damage()) {
+                                // Последнюю статистику забираем
+                                var stats = players[player].stats();
+                                stats.survived = turn_number;
+                                unset(players[player]);
+                            }
+
+                        }
+                    }*/
+                }
+            }
+
+            // explosions
+            for (var eid in explosions) {
+                explosions[eid].frame--;
+                if (explosions[eid].frame < 0) {
+                    delete explosions[eid];
+                }
             }
 
             console.log('end');
@@ -346,12 +388,62 @@ var battlecity = {};
         }
 
         this.showmap = function() {
-            for (row in map) {
-                console.log(':' + map[row].join(''));
+            var map_sub = [];
+
+            for (var rid in map) {
+                map_sub[rid] = map[rid].slice(0);
+            }
+
+//            var map_sub = map.slice(0);
+
+            for (var row in map_sub) {
+
+                for (var pid in players) {
+                    if (players[pid].position()[1] == row) {
+                        //if (players[pid].position()[1] > map[wor]
+                        //console.log('Player found on position ' + players[pid].position()[1] + ' of ' + map_sub[row].length);
+                        //for (var i = 0; i <= 4; i++) {
+                        //    for (var j = 0; j <= 4; j++) {
+                                map_sub[parseInt(row)][players[pid].position()[0]] = 'T';
+                                map_sub[parseInt(row) + 3][players[pid].position()[0]] = 'T';
+                                map_sub[parseInt(row)][players[pid].position()[0] + 3] = 'T';
+                                map_sub[parseInt(row) + 3][players[pid].position()[0] +3] = 'T';
+                        //    }
+                        //}
+                    }
+                }
+
+                for (var eid in explosions) {
+                    if (explosions[eid].y == row) {
+                        //if (players[pid].position()[1] > map[wor]
+                        //console.log('Player found on position ' + players[pid].position()[1] + ' of ' + map_sub[row].length);
+                        //for (var i = 0; i <= 4; i++) {
+                        //    for (var j = 0; j <= 4; j++) {
+                                map_sub[parseInt(row)][explosions[eid].x] = '!';
+                                map_sub[parseInt(row) + 3][explosions[eid].x] = '!';
+                                map_sub[parseInt(row)][explosions[eid].x + 3] = '!';
+                                map_sub[parseInt(row) + 3][explosions[eid].x +3] = '!';
+                        //    }
+                        //}
+                    }
+                }
+
+                for (var bid in bullets) {
+                    if (bullets[bid].y == row) {
+
+                        //console.log('Bullet at ' + bullets[bid].y + ', ' + bullets[bid].x);
+
+                        map_sub[bullets[bid].y][bullets[bid].x] = '*';
+                        map_sub[bullets[bid].y + 1][bullets[bid].x] = '*';
+                        map_sub[bullets[bid].y][bullets[bid].x + 1] = '*';
+                        map_sub[bullets[bid].y + 1][bullets[bid].x + 1] = '*';
+                    }
+                }
+                console.log(':' + map_sub[row].join(''));
             }
         }
     }
 
 })();
 
-process.mixin(exports, battlecity);
+exports.battlecity = battlecity;
