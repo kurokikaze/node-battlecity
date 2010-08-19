@@ -10,27 +10,29 @@ var battlecity = {};
     battlecity.enemies = {
         crawler: {
             speed: 1,
-            mindset: function() {}
+            mindset: function(map, players) {
+                return {'turn':'d', 'move': true};
+            }
         },
         runner: {
             speed: 2,
-            mindset: function() {}
+            mindset: function(map, players) {}
         },
         heavy: {
             speed: 1,
-            mindset: function() {}
+            mindset: function(map, players) {}
         },
         hunter: {
             speed: 1,
-            mindset: function() {}
+            mindset: function(map, players) {}
         },
         digger: {
             speed: 1,
-            mindset: function() {}
+            mindset: function(map, players) {}
         },
         vindicator: {
             speed: 1,
-            mindset: function() {}
+            mindset: function(map, players) {}
         }
     }
 
@@ -121,7 +123,7 @@ var battlecity = {};
                 }
 
                 if (possible) {
-                    console.log('Movement is possible');
+                    //console.log('Movement is possible');
 
                     switch(direction) {
                         case 'u':
@@ -332,6 +334,24 @@ var battlecity = {};
             }
 
             console.log('enemies move');
+            for (enemy_id in enemies) {
+                var command = battlecity.enemies[enemies[enemy_id].type].mindset(map, players);
+
+                if (command) {
+                    if (command.move && command.move == true) {
+                        enemies[enemy_id].move(this);
+                    }
+
+                    if (command.turn && command.turn != false) {
+                        enemies[enemy_id].turn(command.turn);
+                    }
+
+                    if (command.shoot && command.shoot == true) {
+                        enemies[enemy_id].shoot(this);
+                    }
+                }
+
+            }
 
             console.log('bullets');
             // Подвинуть пули (4 раза),..
@@ -419,7 +439,9 @@ var battlecity = {};
                     // How much enemies are there?
                     if (enemies.length < max_enemies) {
                         seed_spots[sid].cooldown = 10;
-                        enemies.push({'x':seed_spots[sid].x,'y':seed_spots[sid].y, 'type':'crawler'});
+                        var enemy = new tank(seed_spots[sid].x, seed_spots[sid].y);
+                        enemy.type = 'crawler';
+                        enemies.push(enemy);
                         console.log('Crawler spawned at ' + seed_spots[sid].x + ', ' + seed_spots[sid].y);
                     }
 
@@ -476,7 +498,18 @@ var battlecity = {};
                         map_sub[bullets[bid].y + 1][bullets[bid].x + 1] = '*';
                     }
                 }
-                console.log(':' + map_sub[row].join(''));
+
+                for (var eid in enemies) {
+                    if (enemies[eid].position()[1] == row) {
+
+                        map_sub[parseInt(row)][enemies[eid].position()[0]] = '1';
+                        map_sub[parseInt(row) + 3][enemies[eid].position()[0]] = '3';
+                        map_sub[parseInt(row)][enemies[eid].position()[0] + 3] = '2';
+                        map_sub[parseInt(row) + 3][enemies[eid].position()[0] + 3] = '4';
+                    }
+                }
+
+                console.log('' + map_sub[row].join(''));
             }
         }
     }
