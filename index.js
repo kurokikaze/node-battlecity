@@ -70,8 +70,8 @@ var battlecity = {};
         var self_map = this;
 
         var seed_spots = [
-            {'x':1, 'y':1, 'cooldown': 4},
-            {'x':13 * 4, 'y':1, 'cooldown': 4}
+            {'x':0, 'y':0, 'cooldown': 4},
+            {'x':13 * 4, 'y':0, 'cooldown': 4}
         ]
 
         var max_enemies = 2;
@@ -99,7 +99,7 @@ var battlecity = {};
 
             this.move = function() {
                 for (var i = 0; i < speed; i++) {
-                    console.log('step');
+                    //console.log('step');
                     this.step();
                 }
             }
@@ -110,15 +110,27 @@ var battlecity = {};
                 switch(direction) {
                     case 'u':
                         possible = self_map.checkAvailability(x, y - 1);
+                        possible = possible && self_map.checkAvailability(x + 1, y - 1);
+                        possible = possible && self_map.checkAvailability(x + 2, y - 1);
+                        possible = possible && self_map.checkAvailability(x + 3, y - 1);
                             break;
                     case 'd':
-                        possible = self_map.checkAvailability(x, y + 1);
+                        possible = self_map.checkAvailability(x, y + 4);
+                        possible = possible && self_map.checkAvailability(x + 1, y + 1);
+                        possible = possible && self_map.checkAvailability(x + 2, y + 1);
+                        possible = possible && self_map.checkAvailability(x + 3, y + 1);
                             break;
                     case 'l':
                         possible = self_map.checkAvailability(x - 1, y);
+                        possible = possible && self_map.checkAvailability(x - 1, y + 1);
+                        possible = possible && self_map.checkAvailability(x - 1, y + 2);
+                        possible = possible && self_map.checkAvailability(x - 1, y + 3);
                             break;
                     case 'r':
-                        possible = self_map.checkAvailability(x + 1, y);
+                        possible = self_map.checkAvailability(x + 4, y);
+                        possible = possible && self_map.checkAvailability(x + 4, y + 1);
+                        possible = possible && self_map.checkAvailability(x + 4, y + 2);
+                        possible = possible && self_map.checkAvailability(x + 4, y + 3);
                             break;
                 }
 
@@ -226,7 +238,15 @@ var battlecity = {};
             }
         }
 
-//        map[7][13] = 'E'; // Place eagle
+        for (var ssid in seed_spots) {
+            for (var i = 0; i < 4; i++) {
+                for (var j = 0; j < 4; j++) {
+                    if (map[seed_spots[ssid].y + j][seed_spots[ssid].x + i] == '#') {
+
+                    }
+                }
+            }
+        }
 
         var players = [];
         var enemies = [];
@@ -397,29 +417,11 @@ var battlecity = {};
                         }
 
                     } else {
-
-    //                    if (BulletHitSomething(bullet)) {
-                            console.log('Boom!!!');
-                            this.addExplosion(bullet.x - 1, bullet.y - 1);
-                            delete bullets[bullet_id];
-
-    //                    }
+                        console.log('Boom!!!');
+                        this.addExplosion(bullet.x - 1, bullet.y - 1);
+                        delete bullets[bullet_id];
                     }
 
-                    /*for (var player in players) {
-                        var pos = players[player].position();
-                        // Если попали...
-                        if (Math.abs(bullet.x - pos.x) < 3 && Math.abs(bullet.y - pos.y) < 3 ) {
-                            console.log('Player ' + player + ' damaged by bullet');
-                            if (!players[player].damage()) {
-                                // Последнюю статистику забираем
-                                var stats = players[player].stats();
-                                stats.survived = turn_number;
-                                unset(players[player]);
-                            }
-
-                        }
-                    }*/
                 }
             }
 
@@ -469,46 +471,38 @@ var battlecity = {};
                 map_sub[rid] = map[rid].slice(0);
             }
 
+
+            // Paint on map
+            for (var pid in players) {
+                map_sub[parseInt(players[pid].position()[1])][players[pid].position()[0]] = 'T';
+                map_sub[parseInt(players[pid].position()[1]) + 3][players[pid].position()[0]] = 'T';
+                map_sub[parseInt(players[pid].position()[1])][players[pid].position()[0] + 3] = 'T';
+                map_sub[parseInt(players[pid].position()[1]) + 3][players[pid].position()[0] +3] = 'T';
+            }
+
+            for (var eid in explosions) {
+                map_sub[parseInt(explosions[eid].y)][explosions[eid].x] = '!';
+                map_sub[parseInt(explosions[eid].y) + 3][explosions[eid].x] = '!';
+                map_sub[parseInt(explosions[eid].y)][explosions[eid].x + 3] = '!';
+                map_sub[parseInt(explosions[eid].y) + 3][explosions[eid].x +3] = '!';
+            }
+
+            for (var bid in bullets) {
+                map_sub[bullets[bid].y][bullets[bid].x] = '*';
+                map_sub[bullets[bid].y + 1][bullets[bid].x] = '*';
+                map_sub[bullets[bid].y][bullets[bid].x + 1] = '*';
+                map_sub[bullets[bid].y + 1][bullets[bid].x + 1] = '*';
+            }
+
+            for (var eid in enemies) {
+                map_sub[parseInt(enemies[eid].position()[1])][enemies[eid].position()[0]] = '1';
+                map_sub[parseInt(enemies[eid].position()[1]) + 3][enemies[eid].position()[0]] = '3';
+                map_sub[parseInt(enemies[eid].position()[1])][enemies[eid].position()[0] + 3] = '2';
+                map_sub[parseInt(enemies[eid].position()[1]) + 3][enemies[eid].position()[0] + 3] = '4';
+            }
+
+            // Show map on screen
             for (var row in map_sub) {
-
-                for (var pid in players) {
-                    if (players[pid].position()[1] == row) {
-                        map_sub[parseInt(row)][players[pid].position()[0]] = 'T';
-                        map_sub[parseInt(row) + 3][players[pid].position()[0]] = 'T';
-                        map_sub[parseInt(row)][players[pid].position()[0] + 3] = 'T';
-                        map_sub[parseInt(row) + 3][players[pid].position()[0] +3] = 'T';
-                    }
-                }
-
-                for (var eid in explosions) {
-                    if (explosions[eid].y == row) {
-                        map_sub[parseInt(row)][explosions[eid].x] = '!';
-                        map_sub[parseInt(row) + 3][explosions[eid].x] = '!';
-                        map_sub[parseInt(row)][explosions[eid].x + 3] = '!';
-                        map_sub[parseInt(row) + 3][explosions[eid].x +3] = '!';
-                    }
-                }
-
-                for (var bid in bullets) {
-                    if (bullets[bid].y == row) {
-
-                        map_sub[bullets[bid].y][bullets[bid].x] = '*';
-                        map_sub[bullets[bid].y + 1][bullets[bid].x] = '*';
-                        map_sub[bullets[bid].y][bullets[bid].x + 1] = '*';
-                        map_sub[bullets[bid].y + 1][bullets[bid].x + 1] = '*';
-                    }
-                }
-
-                for (var eid in enemies) {
-                    if (enemies[eid].position()[1] == row) {
-
-                        map_sub[parseInt(row)][enemies[eid].position()[0]] = '1';
-                        map_sub[parseInt(row) + 3][enemies[eid].position()[0]] = '3';
-                        map_sub[parseInt(row)][enemies[eid].position()[0] + 3] = '2';
-                        map_sub[parseInt(row) + 3][enemies[eid].position()[0] + 3] = '4';
-                    }
-                }
-
                 console.log('' + map_sub[row].join(''));
             }
         }
