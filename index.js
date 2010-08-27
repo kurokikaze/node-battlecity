@@ -109,14 +109,6 @@ var battlecity = {};
                     // load new, main orders listener
                     var orders_flow = new events.EventEmitter;
 
-                    orders_flow.request = function(map) {
-                        ai.stdin.write(JSON.stringify({'action' : 'request', 'map' : map}));
-                    }
-
-                    orders_flow.die = function() {
-                        ai.kill('SIGTERM');
-                    }
-
                     ai.stdout.addListener('data', function(data) {
 
                         try {
@@ -126,9 +118,54 @@ var battlecity = {};
                             order = {};
                         }
 
+                        console.log('Emitting incoming order');
                         orders_flow.emit('order', order);
 
                      });
+
+                    var flow_request = function(map) {
+                        if (ai.stdin.writeable == true) {
+                            console.log('Stream is writeable');
+                        } else {
+                            console.log('Stream is non-writeable');
+                        }
+                        ai.stdin.on('drain', function() {
+                            console.log('Stream drained');
+                        });
+                        var success = ai.stdin.write(JSON.stringify({'action' : 'request', 'map' : map}));
+                        if (success) {
+                            console.log('Write succesful');
+                        }
+                    }
+
+                    orders_flow.die = function() {
+                        ai.kill('SIGTERM');
+                    }
+
+                    orders_flow.safe_request = function(request, callback) {
+                        var status = false;
+                        var self_ai = this;
+
+                        var timer = setTimeout(function() {
+                            console.log('Safe request timeout');
+                            if (!status) {
+                                self_ai.removeAllListeners('order');
+                                callback(true, {'status':'too long'});
+                            }
+                        }, 500);
+
+                        this.addListener('order',function(order) {
+                            clearTimeout(timer);
+                            console.log('Safe request returned');
+                            self_ai.removeAllListeners('order');
+                            status = true;
+                            callback(false, order);
+                        });
+
+                        flow_request(request);
+                        console.log('Safe request issued');
+
+                    }
 
                      // All right
                     callback(false, orders_flow);
@@ -138,12 +175,12 @@ var battlecity = {};
 
             });
 
-            console.log('Adding exit listener');
+            //console.log('Adding exit listener');
             ai.stdout.addListener('exit', function() {
                 sys.puts('AI closed connection');
             });
 
-            console.log('Adding err data listener');
+            //console.log('Adding err data listener');
             ai.stderr.on('data', function(data) {
                 console.log('Err data: ' + data);
             });
@@ -153,7 +190,7 @@ var battlecity = {};
 
         }
 
-        var tank = function(setx, sety) {
+        var tank = function(setx, sety, ai) {
             var x = setx | 0;
             var y = sety | 0;
 

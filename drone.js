@@ -15,7 +15,7 @@ stdin.addListener('data', function(message_raw) {
         try {
             message = JSON.parse(messages[message_id]);
         } catch(e) {
-            process.stdout.write('message: ' + messages[message_id] + '; error: ' + e);
+            //process.stdout.write('message: ' + messages[message_id] + '; error: ' + e);
             message = {};
         }
 
@@ -25,9 +25,6 @@ stdin.addListener('data', function(message_raw) {
 
             logic = {
                 'tick': function(map) {
-                    setTimeout(function() {
-
-                    })
                     return {'move': true, 'turn':'n', 'shoot':false};
                 }
             };
@@ -49,4 +46,4 @@ stdin.addListener('data', function(message_raw) {
 });
 
 //sys.debug('Running');
-process.stdout.write(JSON.stringify({'status':'running'}));
+//process.stdout.write(JSON.stringify({'status':'running'}));
