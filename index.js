@@ -1,6 +1,7 @@
 var console = {};
 console.log = require('sys').puts;
-
+var child = require('child_process');
+var events = require('events');
 
 var battlecity = {};
 //var doit = require('./do');
@@ -76,18 +77,26 @@ var battlecity = {};
 
         var max_enemies = 2;
 
-        this.load_ai = function(id) {
-            var ai = process.createChildProcess('node', ['drone.js', '2']);
-            // Tell drone to load AI by id
-            ai.write(JSON.stringify({'command':'load', 'id':id}));
+        var ai_pool = [];
 
-            ai.addListener('output', function(data) {
+        this.load_ai = function(id, tank_id, callback) {
+            var ai = child.spawn('node', ['drone.js']);
+            console.log('Starting drone');
+
+            // Tell drone to load AI by id
+            console.log('Sending load command');
+            ai.stdin.write(JSON.stringify({'action':'load', 'id':id}));
+
+            console.log('Adding status listener');
+            ai.stdout.addListener('data', function(data) {
+                console.log('Data from drone: ' + data);
                 var order = {};
 
                 try {
                     order = JSON.parse(data);
                 } catch(e) {
-                    callback(false);
+                    sys.puts('Error parsing drone response');
+                    callback(true);
                 }
 
                 if (order.status == 1) {
@@ -95,32 +104,52 @@ var battlecity = {};
 
                     // prepare for game
                     // unload old listener
-                    ai.removeListener('output', this);
+                    ai.stdout.removeAllListeners('data');
 
                     // load new, main orders listener
-                    ai.addListener('output', function(data) {
-                        var order = {};
+                    var orders_flow = new events.EventEmitter;
+
+                    orders_flow.request = function(map) {
+                        ai.stdin.write(JSON.stringify({'action' : 'request', 'map' : map}));
+                    }
+
+                    orders_flow.die = function() {
+                        ai.kill('SIGTERM');
+                    }
+
+                    ai.stdout.addListener('data', function(data) {
 
                         try {
                             order = JSON.parse(data);
                         } catch(e) {
-                            sys.puts('[P]message: ' + data + '; error: ' + e);
+                            sys.puts('[P] message: ' + data + '; error: ' + e);
                             order = {};
                         }
 
-                        if (order) {
-                            action = order;
-                        }
+                        orders_flow.emit('order', order);
+
                      });
 
-                    callback(true);
+                     // All right
+                    callback(false, orders_flow);
                 } else {
-                    callback(false);
+                    callback(true);
                 }
 
             });
 
+            console.log('Adding exit listener');
+            ai.stdout.addListener('exit', function() {
+                sys.puts('AI closed connection');
+            });
+
+            console.log('Adding err data listener');
+            ai.stderr.on('data', function(data) {
+                console.log('Err data: ' + data);
+            });
+
             var action = {};
+
 
         }
 
