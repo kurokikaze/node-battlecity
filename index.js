@@ -11,7 +11,7 @@ var battlecity = {};
         crawler: {
             speed: 1,
             mindset: function(map, players) {
-                return {'turn':'d', 'move': true};
+                return {'turn':'d', 'move': true, 'shoot': true};
             }
         },
         runner: {
@@ -75,6 +75,54 @@ var battlecity = {};
         ]
 
         var max_enemies = 2;
+
+        this.load_ai = function(id) {
+            var ai = process.createChildProcess('node', ['drone.js', '2']);
+            // Tell drone to load AI by id
+            ai.write(JSON.stringify({'command':'load', 'id':id}));
+
+            ai.addListener('output', function(data) {
+                var order = {};
+
+                try {
+                    order = JSON.parse(data);
+                } catch(e) {
+                    callback(false);
+                }
+
+                if (order.status == 1) {
+                    // Ready!
+
+                    // prepare for game
+                    // unload old listener
+                    ai.removeListener('output', this);
+
+                    // load new, main orders listener
+                    ai.addListener('output', function(data) {
+                        var order = {};
+
+                        try {
+                            order = JSON.parse(data);
+                        } catch(e) {
+                            sys.puts('[P]message: ' + data + '; error: ' + e);
+                            order = {};
+                        }
+
+                        if (order) {
+                            action = order;
+                        }
+                     });
+
+                    callback(true);
+                } else {
+                    callback(false);
+                }
+
+            });
+
+            var action = {};
+
+        }
 
         var tank = function(setx, sety) {
             var x = setx | 0;
@@ -342,10 +390,11 @@ var battlecity = {};
         }
 
         // Содержание хода
-        this.progress = function() {
+        this.progress = function(callback) {
             // Создать противников, если нужно
 
             // Опросить и подвинуть танки игроков, проверить столкновения
+
             console.log('move');
             for (player_id in players) {
                 players[player_id].cooldown();
@@ -418,6 +467,23 @@ var battlecity = {};
 
                     } else {
                         console.log('Boom!!!');
+
+                        if (bullet.x < 1) {
+                            bullet.x = 1;
+                        }
+
+                        if (bullet.y < 1) {
+                            bullet.y = 1;
+                        }
+
+                        if (bullet.x > 12 * 4) {
+                            bullet.x = 12 * 4;
+                        }
+
+                        if (bullet.y > 12 * 4) {
+                            bullet.y = 12 * 4;
+                        }
+
                         this.addExplosion(bullet.x - 1, bullet.y - 1);
                         delete bullets[bullet_id];
                     }

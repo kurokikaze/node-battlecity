@@ -8,9 +8,13 @@ sys.puts('');
 sys.puts('');
 sys.puts('');
 
+/*
 setInterval(function() {
     stage.progress();
     stage.showmap();
 }, 500);
+*/
+
+stage.load_ai(1);
 
 
