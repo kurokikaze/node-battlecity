@@ -2,40 +2,14 @@ var console = {};
 console.log = require('sys').puts;
 var child = require('child_process');
 var events = require('events');
+var step = require('./step');
 
 var battlecity = {};
 //var doit = require('./do');
 
 (function(){
 
-    battlecity.enemies = {
-        crawler: {
-            speed: 1,
-            mindset: function(map, players) {
-                return {'turn':'d', 'move': true, 'shoot': true};
-            }
-        },
-        runner: {
-            speed: 2,
-            mindset: function(map, players) {}
-        },
-        heavy: {
-            speed: 1,
-            mindset: function(map, players) {}
-        },
-        hunter: {
-            speed: 1,
-            mindset: function(map, players) {}
-        },
-        digger: {
-            speed: 1,
-            mindset: function(map, players) {}
-        },
-        vindicator: {
-            speed: 1,
-            mindset: function(map, players) {}
-        }
-    }
+    battlecity.enemies = require('./enemies');
 
     battlecity.map = function(map_array) {
         // ' ' : Ничего
@@ -49,13 +23,13 @@ var battlecity = {};
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#','#','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         [' ',' ',' ',' ',' ',' ',' ',' ','#',' ',' ',' ',' '],
-                         ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
-                         ['#','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                         [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' '],
+                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
+                         [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ','#',' ','#',' ',' ',' ',' ',' ','#',' ','#',' '],
                          [' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ']];
 
@@ -76,6 +50,11 @@ var battlecity = {};
         ]
 
         var max_enemies = 2;
+
+
+        this.sendData = function(player_id) {
+
+        }
 
         var ai_pool = [];
 
@@ -175,12 +154,12 @@ var battlecity = {};
 
             });
 
-            //console.log('Adding exit listener');
+            // Adding exit listener
             ai.stdout.addListener('exit', function() {
                 sys.puts('AI closed connection');
             });
 
-            //console.log('Adding err data listener');
+            // Adding err data listener
             ai.stderr.on('data', function(data) {
                 console.log('Err data: ' + data);
             });
@@ -217,6 +196,13 @@ var battlecity = {};
                     this.step();
                 }
             }
+
+            this.status = {
+                'getX': function() { return x },
+                'getY': function() { return x },
+                'getDir': function() { return direction },
+                'getHeat': function() { return gunheat },
+            };
 
             this.step = function() {
                 var possible = false;
@@ -367,9 +353,28 @@ var battlecity = {};
 
         var self = this;
 
+        var load_players = function(id1, id2, callback) {
         // Загружаем игроков
-        players.push(new tank(0, 48));
-        players.push(new tank(32 ,48));
+        self.load_ai(1, 1, function(err, ai) {
+            if (!err) {
+                var tank1 = new tank(0, 48);
+                tank1.ai = ai;
+                players.push(tank1);
+            }
+
+            self.load_ai(2, 2, function(err2, ai) {
+                if (!err) {
+                    var tank2 = new tank(32 ,48);
+                    tank2.ai = ai;
+                    players.push(tank2);
+                }
+
+                if (callback) {
+                    callback(err1 || err2);
+                }
+            });
+        });
+        }
 
         this.checkAvailability = function(x, y) {
             console.log('Testing ' + x + ', ' + y);
@@ -460,6 +465,11 @@ var battlecity = {};
             // Создать противников, если нужно
 
             // Опросить и подвинуть танки игроков, проверить столкновения
+            step(function GetPlayerOneCommand() {
+                    players[1].ai.safe_request(map, this);
+            }, function GetPlayerTwoCommand() {
+                    players[2].ai.safe_request(map, this);
+            });
 
             console.log('move');
             for (player_id in players) {
@@ -470,7 +480,7 @@ var battlecity = {};
 
             console.log('enemies move');
             for (enemy_id in enemies) {
-                var command = battlecity.enemies[enemies[enemy_id].type].mindset(map, players);
+                var command = battlecity.enemies[enemies[enemy_id].type].mindset.call(enemies[enemy_id], map, players);
 
                 if (command) {
                     if (command.move && command.move == true) {
